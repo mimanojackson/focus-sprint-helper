@@ -23,3 +23,16 @@ export interface Theme {
   primaryColor: string;
   primaryHue: number;
 }
+
+export interface DailyStats {
+  date: string;
+  focusMinutes: number;
+  sessionsCompleted: number;
+}
+
+export interface WeeklyStats {
+  weekStartDate: string;
+  totalFocusMinutes: number;
+  totalSessions: number;
+  dailyStats: DailyStats[];
+}
