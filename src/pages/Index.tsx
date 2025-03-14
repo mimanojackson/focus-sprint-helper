@@ -3,8 +3,10 @@ import React from "react";
 import Timer from "@/components/Timer";
 import Layout from "@/components/Layout";
 import { useTimer } from "@/context/TimerContext";
-import { Flame } from "lucide-react";
+import { Flame, Trophy } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
 
 const Index = () => {
   const { streak } = useTimer();
@@ -22,6 +24,14 @@ const Index = () => {
           </span>
         </div>
       )}
+      
+      <Link to="/achievements" className="block mb-6 w-fit mx-auto">
+        <Button variant="outline" className="flex items-center gap-2">
+          <Trophy size={16} />
+          <span>View Achievements</span>
+        </Button>
+      </Link>
+      
       <Timer />
     </Layout>
   );
