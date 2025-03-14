@@ -2,7 +2,7 @@
 import React from "react";
 import { 
   Play, Pause, RotateCcw, SkipForward, 
-  Volume2, VolumeX, Coffee, Brain 
+  Volume2, VolumeX, Coffee, Brain, Watch 
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -27,6 +27,8 @@ const Timer = () => {
   const isRunning = status === "running";
   const isPaused = status === "paused";
   const isFocusMode = mode === "focus";
+  const isBreakMode = mode === "break";
+  const isLongBreakMode = mode === "longBreak";
 
   // SVG Circle properties
   const circleRadius = 120;
@@ -54,12 +56,12 @@ const Timer = () => {
         </Button>
         
         <Button
-          variant={!isFocusMode ? "default" : "outline"}
+          variant={isBreakMode ? "default" : "outline"}
           size="sm"
-          onClick={() => !isFocusMode ? null : toggleMode()}
+          onClick={() => isBreakMode ? null : toggleMode()}
           className={cn(
             "gap-2 px-4 py-2 transition-all duration-300",
-            !isFocusMode 
+            isBreakMode 
               ? "bg-primary text-primary-foreground" 
               : "hover:text-primary"
           )}
@@ -67,6 +69,22 @@ const Timer = () => {
         >
           <Coffee size={16} />
           <span>Break</span>
+        </Button>
+        
+        <Button
+          variant={isLongBreakMode ? "default" : "outline"}
+          size="sm"
+          onClick={() => isLongBreakMode ? null : toggleMode()}
+          className={cn(
+            "gap-2 px-4 py-2 transition-all duration-300",
+            isLongBreakMode 
+              ? "bg-primary text-primary-foreground" 
+              : "hover:text-primary"
+          )}
+          disabled={isRunning || isPaused}
+        >
+          <Watch size={16} />
+          <span>Long Break</span>
         </Button>
       </div>
 
@@ -99,7 +117,10 @@ const Timer = () => {
               cx="130"
               cy="130"
               r={circleRadius}
-              className="stroke-primary progress-circle"
+              className={cn(
+                "progress-circle stroke-primary",
+                isLongBreakMode && "stroke-indigo-500"
+              )}
               strokeWidth="4"
               strokeLinecap="round"
               strokeDasharray={circleCircumference}
@@ -117,7 +138,11 @@ const Timer = () => {
               {status === "idle" 
                 ? "Ready to start" 
                 : status === "running" 
-                  ? isFocusMode ? "Focus time" : "Break time"
+                  ? isFocusMode 
+                    ? "Focus time" 
+                    : isBreakMode
+                      ? "Break time"
+                      : "Long break time"
                   : status === "paused" 
                     ? "Paused" 
                     : "Completed"}

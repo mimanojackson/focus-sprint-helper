@@ -3,7 +3,7 @@ import React from "react";
 import { useTimer } from "@/context/TimerContext";
 import { 
   Clock, Volume2, VolumeX, 
-  BellRing, HelpCircle, AlertTriangle 
+  BellRing, HelpCircle, AlertTriangle, Watch 
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -14,9 +14,13 @@ import { Separator } from "@/components/ui/separator";
 const Settings = () => {
   const { 
     focusDuration, 
-    breakDuration, 
+    breakDuration,
+    longBreakDuration,
+    sessionsTillLongBreak,
     setFocusDuration, 
     setBreakDuration,
+    setLongBreakDuration,
+    setSessionsTillLongBreak,
     isMuted,
     toggleMute
   } = useTimer();
@@ -24,6 +28,7 @@ const Settings = () => {
   // Convert seconds to minutes for display
   const focusMinutes = focusDuration / 60;
   const breakMinutes = breakDuration / 60;
+  const longBreakMinutes = longBreakDuration / 60;
 
   const handleFocusChange = (value: number[]) => {
     setFocusDuration(value[0] * 60);
@@ -31,6 +36,14 @@ const Settings = () => {
 
   const handleBreakChange = (value: number[]) => {
     setBreakDuration(value[0] * 60);
+  };
+  
+  const handleLongBreakChange = (value: number[]) => {
+    setLongBreakDuration(value[0] * 60);
+  };
+  
+  const handleSessionsChange = (value: number[]) => {
+    setSessionsTillLongBreak(value[0]);
   };
 
   return (
@@ -80,6 +93,49 @@ const Settings = () => {
             className="w-full"
           />
         </div>
+        
+        {/* Long Break Duration */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <Label htmlFor="long-break-duration" className="flex items-center">
+              <Watch size={16} className="mr-2" />
+              Long Break Duration
+            </Label>
+            <span className="text-sm font-medium">{longBreakMinutes} min</span>
+          </div>
+          <Slider
+            id="long-break-duration"
+            min={10}
+            max={30}
+            step={5}
+            value={[longBreakMinutes]}
+            onValueChange={handleLongBreakChange}
+            className="w-full"
+          />
+        </div>
+        
+        {/* Sessions until Long Break */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <Label htmlFor="sessions-till-long-break" className="flex items-center">
+              <Clock size={16} className="mr-2" />
+              Sessions until Long Break
+            </Label>
+            <span className="text-sm font-medium">{sessionsTillLongBreak}</span>
+          </div>
+          <Slider
+            id="sessions-till-long-break"
+            min={2}
+            max={6}
+            step={1}
+            value={[sessionsTillLongBreak]}
+            onValueChange={handleSessionsChange}
+            className="w-full"
+          />
+          <p className="text-xs text-muted-foreground">
+            Number of focus sessions to complete before a long break
+          </p>
+        </div>
 
         <Separator />
 
@@ -114,7 +170,8 @@ const Settings = () => {
           </h3>
           <p className="text-sm text-muted-foreground">
             The Pomodoro Technique is a time management method that uses a timer to break work into intervals, 
-            traditionally 25 minutes in length, separated by short breaks. These intervals are known as "pomodoros".
+            traditionally 25 minutes in length, separated by short breaks. After completing a set of pomodoros 
+            (usually 4), take a longer break of 15-30 minutes to recharge.
           </p>
         </div>
 

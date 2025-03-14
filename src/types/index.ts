@@ -13,3 +13,6 @@ export interface DailyStreak {
   longestStreak: number;
   lastActiveDate: string | null;
 }
+
+export type TimerMode = "focus" | "break" | "longBreak";
+

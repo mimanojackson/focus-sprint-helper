@@ -1,9 +1,9 @@
+
 import React, { createContext, useContext, useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
-import { Achievement, DailyStreak } from "@/types";
+import { Achievement, DailyStreak, TimerMode } from "@/types";
 import { ACHIEVEMENTS, checkForNewAchievements, updateDailyStreak } from "@/utils/achievementUtils";
 
-export type TimerMode = "focus" | "break";
 export type TimerStatus = "idle" | "running" | "paused" | "completed";
 
 export interface TimerSession {
@@ -20,7 +20,9 @@ interface TimerContextType {
   timeLeft: number;
   focusDuration: number;
   breakDuration: number;
+  longBreakDuration: number;
   sessionsCompleted: number;
+  sessionsTillLongBreak: number;
   sessions: TimerSession[];
   progress: number;
   startTimer: () => void;
@@ -30,6 +32,8 @@ interface TimerContextType {
   toggleMode: () => void;
   setFocusDuration: (duration: number) => void;
   setBreakDuration: (duration: number) => void;
+  setLongBreakDuration: (duration: number) => void;
+  setSessionsTillLongBreak: (sessions: number) => void;
   isMuted: boolean;
   toggleMute: () => void;
   clearHistory: () => void;
@@ -54,6 +58,8 @@ export const TimerProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [timeLeft, setTimeLeft] = useState(25 * 60); // Default 25 minutes
   const [focusDuration, setFocusDuration] = useState(25 * 60); // 25 minutes
   const [breakDuration, setBreakDuration] = useState(5 * 60); // 5 minutes
+  const [longBreakDuration, setLongBreakDuration] = useState(15 * 60); // 15 minutes
+  const [sessionsTillLongBreak, setSessionsTillLongBreak] = useState(4); // Default 4 sessions
   const [sessionsCompleted, setSessionsCompleted] = useState(0);
   const [progress, setProgress] = useState(0);
   const [isMuted, setIsMuted] = useState(false);
@@ -85,16 +91,19 @@ export const TimerProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const startTimeRef = useRef<number>(0);
   const endTimeRef = useRef<number>(0);
   const currentSessionRef = useRef<TimerSession | null>(null);
+  const focusSessionsCompletedRef = useRef<number>(0);
 
   // Audio refs
   const focusCompleteSound = useRef<HTMLAudioElement | null>(null);
   const breakCompleteSound = useRef<HTMLAudioElement | null>(null);
+  const longBreakCompleteSound = useRef<HTMLAudioElement | null>(null);
   const achievementSound = useRef<HTMLAudioElement | null>(null);
 
   // Initialize audio on component mount
   useEffect(() => {
     focusCompleteSound.current = new Audio("https://assets.mixkit.co/sfx/preview/mixkit-achievement-bell-600.mp3");
     breakCompleteSound.current = new Audio("https://assets.mixkit.co/sfx/preview/mixkit-positive-notification-951.mp3");
+    longBreakCompleteSound.current = new Audio("https://assets.mixkit.co/sfx/preview/mixkit-magical-bell-notification-2353.mp3");
     achievementSound.current = new Audio("https://assets.mixkit.co/sfx/preview/mixkit-winning-chimes-2015.mp3");
 
     return () => {
@@ -103,6 +112,9 @@ export const TimerProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       }
       if (breakCompleteSound.current) {
         breakCompleteSound.current = null;
+      }
+      if (longBreakCompleteSound.current) {
+        longBreakCompleteSound.current = null;
       }
       if (achievementSound.current) {
         achievementSound.current = null;
@@ -131,7 +143,11 @@ export const TimerProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       timerRef.current = window.setInterval(() => {
         setTimeLeft((prev) => {
           const newTimeLeft = prev - 1;
-          const totalTime = mode === "focus" ? focusDuration : breakDuration;
+          const totalTime = mode === "focus" 
+            ? focusDuration 
+            : mode === "break" 
+              ? breakDuration 
+              : longBreakDuration;
           setProgress(100 - (newTimeLeft / totalTime) * 100);
           
           if (newTimeLeft <= 0) {
@@ -156,9 +172,14 @@ export const TimerProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   // Reset time when mode changes
   useEffect(() => {
-    setTimeLeft(mode === "focus" ? focusDuration : breakDuration);
+    const duration = mode === "focus" 
+      ? focusDuration 
+      : mode === "break" 
+        ? breakDuration 
+        : longBreakDuration;
+    setTimeLeft(duration);
     setProgress(0);
-  }, [mode, focusDuration, breakDuration]);
+  }, [mode, focusDuration, breakDuration, longBreakDuration]);
 
   const startTimer = () => {
     if (status === "idle" || status === "paused") {
@@ -170,7 +191,11 @@ export const TimerProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         currentSessionRef.current = {
           id: Date.now().toString(),
           date: new Date(),
-          duration: mode === "focus" ? focusDuration : breakDuration,
+          duration: mode === "focus" 
+            ? focusDuration 
+            : mode === "break" 
+              ? breakDuration 
+              : longBreakDuration,
           type: mode,
           completed: false
         };
@@ -192,7 +217,11 @@ export const TimerProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       timerRef.current = null;
     }
     
-    setTimeLeft(mode === "focus" ? focusDuration : breakDuration);
+    setTimeLeft(mode === "focus" 
+      ? focusDuration 
+      : mode === "break" 
+        ? breakDuration 
+        : longBreakDuration);
     setProgress(0);
     setStatus("idle");
     currentSessionRef.current = null;
@@ -267,46 +296,90 @@ export const TimerProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       timerRef.current = null;
     }
 
-    // Play sound notification if not muted
-    if (!isMuted) {
-      const sound = mode === "focus" ? focusCompleteSound.current : breakCompleteSound.current;
-      if (sound) {
-        sound.play().catch(e => console.error("Error playing sound:", e));
+    // Handle focus session completion
+    if (mode === "focus") {
+      // Update focus sessions completed count
+      focusSessionsCompletedRef.current += 1;
+      
+      // Save completed session to history
+      if (currentSessionRef.current) {
+        const completedSession = {
+          ...currentSessionRef.current,
+          completed: true
+        };
+        
+        setSessions(prev => [completedSession, ...prev]);
+        setSessionsCompleted(prev => prev + 1);
+        
+        // Update streak and check for achievements
+        updateStreakAndAchievements();
       }
+      
+      // Check if we should take a long break
+      const shouldTakeLongBreak = focusSessionsCompletedRef.current >= sessionsTillLongBreak;
+      
+      // Set next mode
+      setMode(shouldTakeLongBreak ? "longBreak" : "break");
+      
+      // Reset focus sessions count if taking a long break
+      if (shouldTakeLongBreak) {
+        focusSessionsCompletedRef.current = 0;
+      }
+      
+      // Play sound notification if not muted
+      if (!isMuted) {
+        if (focusCompleteSound.current) {
+          focusCompleteSound.current.play().catch(e => console.error("Error playing sound:", e));
+        }
+      }
+      
+      // Show toast notification
+      const nextBreakText = shouldTakeLongBreak 
+        ? "Time for a longer break!"
+        : "Time for a break.";
+      
+      toast("Focus session completed!", {
+        description: nextBreakText,
+        duration: 4000,
+      });
+    } 
+    // Handle break completion
+    else if (mode === "break" || mode === "longBreak") {
+      const isLongBreak = mode === "longBreak";
+      
+      // Play sound notification if not muted
+      if (!isMuted) {
+        const sound = isLongBreak ? longBreakCompleteSound.current : breakCompleteSound.current;
+        if (sound) {
+          sound.play().catch(e => console.error("Error playing sound:", e));
+        }
+      }
+      
+      // Show toast notification
+      toast(isLongBreak ? "Long break completed!" : "Break time is over.", {
+        description: "Ready to focus again?",
+        duration: 4000,
+      });
+      
+      // Set next mode back to focus
+      setMode("focus");
     }
 
-    // Show toast notification
-    const message = mode === "focus" 
-      ? "Focus session completed! Time for a break."
-      : "Break time is over. Ready to focus again?";
-    
-    toast(message, {
-      duration: 4000,
-    });
-
-    // Save completed session to history if it was a focus session
-    if (mode === "focus" && currentSessionRef.current) {
-      const completedSession = {
-        ...currentSessionRef.current,
-        completed: true
-      };
-      
-      setSessions(prev => [completedSession, ...prev]);
-      setSessionsCompleted(prev => prev + 1);
-      
-      // Update streak and check for achievements
-      updateStreakAndAchievements();
-    }
-
-    // Toggle mode and reset timer
-    setMode(mode === "focus" ? "break" : "focus");
+    // Reset timer state
     setStatus("idle");
     currentSessionRef.current = null;
   };
 
   const toggleMode = () => {
     if (status === "idle") {
-      setMode(mode === "focus" ? "break" : "focus");
+      // Cycle through the modes: focus -> break -> longBreak -> focus
+      if (mode === "focus") {
+        setMode("break");
+      } else if (mode === "break") {
+        setMode("longBreak");
+      } else {
+        setMode("focus");
+      }
     }
   };
 
@@ -322,6 +395,17 @@ export const TimerProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (mode === "break" && status === "idle") {
       setTimeLeft(duration);
     }
+  };
+  
+  const updateLongBreakDuration = (duration: number) => {
+    setLongBreakDuration(duration);
+    if (mode === "longBreak" && status === "idle") {
+      setTimeLeft(duration);
+    }
+  };
+  
+  const updateSessionsTillLongBreak = (sessions: number) => {
+    setSessionsTillLongBreak(sessions);
   };
 
   const toggleMute = () => {
@@ -339,7 +423,9 @@ export const TimerProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     timeLeft,
     focusDuration,
     breakDuration,
+    longBreakDuration,
     sessionsCompleted,
+    sessionsTillLongBreak,
     sessions,
     progress,
     startTimer,
@@ -349,6 +435,8 @@ export const TimerProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     toggleMode,
     setFocusDuration: updateFocusDuration,
     setBreakDuration: updateBreakDuration,
+    setLongBreakDuration: updateLongBreakDuration,
+    setSessionsTillLongBreak: updateSessionsTillLongBreak,
     isMuted,
     toggleMute,
     clearHistory,
