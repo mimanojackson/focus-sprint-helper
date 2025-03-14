@@ -1,15 +1,17 @@
 
 import React from "react";
 import { useTimer } from "@/context/TimerContext";
+import { useTheme } from "@/context/ThemeContext";
 import { 
   Clock, Volume2, VolumeX, 
-  BellRing, HelpCircle, AlertTriangle, Watch 
+  BellRing, HelpCircle, AlertTriangle, Watch, Palette 
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
+import { ThemeColor } from "@/types";
 
 const Settings = () => {
   const { 
@@ -24,6 +26,8 @@ const Settings = () => {
     isMuted,
     toggleMute
   } = useTimer();
+
+  const { theme, setTheme, allThemes } = useTheme();
 
   // Convert seconds to minutes for display
   const focusMinutes = focusDuration / 60;
@@ -135,6 +139,31 @@ const Settings = () => {
           <p className="text-xs text-muted-foreground">
             Number of focus sessions to complete before a long break
           </p>
+        </div>
+
+        <Separator />
+
+        {/* Theme Selection */}
+        <div className="space-y-3">
+          <Label className="flex items-center">
+            <Palette size={16} className="mr-2" />
+            Theme Color
+          </Label>
+          <div className="flex flex-wrap gap-3">
+            {Object.entries(allThemes).map(([key, themeOption]) => (
+              <button
+                key={key}
+                onClick={() => setTheme(key as ThemeColor)}
+                className={`w-10 h-10 rounded-full transition-all ${
+                  theme.name === key 
+                    ? 'ring-2 ring-offset-2 ring-primary scale-110' 
+                    : 'hover:scale-105'
+                }`}
+                style={{ backgroundColor: themeOption.primaryColor }}
+                aria-label={`${key} theme`}
+              />
+            ))}
+          </div>
         </div>
 
         <Separator />

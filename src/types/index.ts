@@ -16,3 +16,10 @@ export interface DailyStreak {
 
 export type TimerMode = "focus" | "break" | "longBreak";
 
+export type ThemeColor = "blue" | "purple" | "green" | "orange" | "pink";
+
+export interface Theme {
+  name: ThemeColor;
+  primaryColor: string;
+  primaryHue: number;
+}
