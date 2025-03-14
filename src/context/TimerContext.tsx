@@ -1,6 +1,7 @@
-
 import React, { createContext, useContext, useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
+import { Achievement, DailyStreak } from "@/types";
+import { ACHIEVEMENTS, checkForNewAchievements, updateDailyStreak } from "@/utils/achievementUtils";
 
 export type TimerMode = "focus" | "break";
 export type TimerStatus = "idle" | "running" | "paused" | "completed";
@@ -32,6 +33,8 @@ interface TimerContextType {
   isMuted: boolean;
   toggleMute: () => void;
   clearHistory: () => void;
+  achievements: Achievement[];
+  streak: DailyStreak;
 }
 
 const TimerContext = createContext<TimerContextType | undefined>(undefined);
@@ -60,6 +63,22 @@ export const TimerProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const savedSessions = localStorage.getItem("focusTimerSessions");
     return savedSessions ? JSON.parse(savedSessions) : [];
   });
+  
+  // Streak tracking
+  const [streak, setStreak] = useState<DailyStreak>(() => {
+    const savedStreak = localStorage.getItem("focusTimerStreak");
+    return savedStreak ? JSON.parse(savedStreak) : {
+      currentStreak: 0,
+      longestStreak: 0,
+      lastActiveDate: null
+    };
+  });
+  
+  // Achievements
+  const [achievements, setAchievements] = useState<Achievement[]>(() => {
+    const savedAchievements = localStorage.getItem("focusTimerAchievements");
+    return savedAchievements ? JSON.parse(savedAchievements) : ACHIEVEMENTS;
+  });
 
   // Timer refs
   const timerRef = useRef<number | null>(null);
@@ -70,11 +89,13 @@ export const TimerProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // Audio refs
   const focusCompleteSound = useRef<HTMLAudioElement | null>(null);
   const breakCompleteSound = useRef<HTMLAudioElement | null>(null);
+  const achievementSound = useRef<HTMLAudioElement | null>(null);
 
   // Initialize audio on component mount
   useEffect(() => {
     focusCompleteSound.current = new Audio("https://assets.mixkit.co/sfx/preview/mixkit-achievement-bell-600.mp3");
     breakCompleteSound.current = new Audio("https://assets.mixkit.co/sfx/preview/mixkit-positive-notification-951.mp3");
+    achievementSound.current = new Audio("https://assets.mixkit.co/sfx/preview/mixkit-winning-chimes-2015.mp3");
 
     return () => {
       if (focusCompleteSound.current) {
@@ -83,6 +104,9 @@ export const TimerProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       if (breakCompleteSound.current) {
         breakCompleteSound.current = null;
       }
+      if (achievementSound.current) {
+        achievementSound.current = null;
+      }
     };
   }, []);
 
@@ -90,6 +114,16 @@ export const TimerProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   useEffect(() => {
     localStorage.setItem("focusTimerSessions", JSON.stringify(sessions));
   }, [sessions]);
+  
+  // Save streak to localStorage when it changes
+  useEffect(() => {
+    localStorage.setItem("focusTimerStreak", JSON.stringify(streak));
+  }, [streak]);
+  
+  // Save achievements to localStorage when they change
+  useEffect(() => {
+    localStorage.setItem("focusTimerAchievements", JSON.stringify(achievements));
+  }, [achievements]);
 
   // Timer logic
   useEffect(() => {
@@ -170,6 +204,63 @@ export const TimerProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   };
 
+  const updateStreakAndAchievements = () => {
+    // Update streak
+    const streakUpdate = updateDailyStreak(streak.lastActiveDate);
+    
+    if (streakUpdate.streakUpdated) {
+      let newCurrentStreak = streak.currentStreak;
+      
+      if (streakUpdate.currentStreak === -1) {
+        // Increment the current streak
+        newCurrentStreak += 1;
+      } else {
+        // Reset or set to the provided value
+        newCurrentStreak = streakUpdate.currentStreak;
+      }
+      
+      const newLongestStreak = Math.max(newCurrentStreak, streak.longestStreak);
+      
+      setStreak({
+        currentStreak: newCurrentStreak,
+        longestStreak: newLongestStreak,
+        lastActiveDate: streakUpdate.lastActiveDate
+      });
+      
+      // Check for new achievements
+      const newAchievements = checkForNewAchievements(
+        sessions, 
+        newCurrentStreak,
+        achievements
+      );
+      
+      // If new achievements were unlocked
+      if (JSON.stringify(newAchievements) !== JSON.stringify(achievements)) {
+        setAchievements(newAchievements);
+        
+        // Find which achievement was just unlocked
+        const newlyUnlocked = newAchievements.filter(
+          (a, i) => a.unlocked && !achievements[i].unlocked
+        );
+        
+        if (newlyUnlocked.length > 0) {
+          // Play achievement sound
+          if (!isMuted && achievementSound.current) {
+            achievementSound.current.play().catch(e => console.error("Error playing sound:", e));
+          }
+          
+          // Show achievement toast
+          newlyUnlocked.forEach(achievement => {
+            toast(`🏆 Achievement Unlocked: ${achievement.title}`, {
+              description: achievement.description,
+              duration: 5000,
+            });
+          });
+        }
+      }
+    }
+  };
+
   const completeTimer = () => {
     if (timerRef.current) {
       clearInterval(timerRef.current);
@@ -202,6 +293,9 @@ export const TimerProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       
       setSessions(prev => [completedSession, ...prev]);
       setSessionsCompleted(prev => prev + 1);
+      
+      // Update streak and check for achievements
+      updateStreakAndAchievements();
     }
 
     // Toggle mode and reset timer
@@ -236,6 +330,7 @@ export const TimerProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const clearHistory = () => {
     setSessions([]);
+    // Don't reset achievements or streak when clearing history
   };
 
   const value = {
@@ -256,7 +351,9 @@ export const TimerProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setBreakDuration: updateBreakDuration,
     isMuted,
     toggleMute,
-    clearHistory
+    clearHistory,
+    achievements,
+    streak
   };
 
   return <TimerContext.Provider value={value}>{children}</TimerContext.Provider>;
