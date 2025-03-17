@@ -2,7 +2,7 @@
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import { 
-  Timer, History, Settings, Home 
+  Timer, History, Settings, LineChart 
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -19,6 +19,7 @@ const Layout = ({ children }: LayoutProps) => {
 
   const navItems = [
     { path: "/", label: "Timer", icon: Timer },
+    { path: "/statistics", label: "Statistics", icon: LineChart },
     { path: "/history", label: "History", icon: History },
     { path: "/settings", label: "Settings", icon: Settings },
   ];

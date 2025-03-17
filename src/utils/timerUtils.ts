@@ -1,4 +1,6 @@
 
+import { DailyStats, WeeklyStats } from "@/types";
+
 /**
  * Formats seconds into a MM:SS time string
  */
