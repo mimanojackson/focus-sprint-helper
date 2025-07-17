@@ -90,11 +90,6 @@ const Timer = () => {
 
       {/* Timer circle */}
       <div className="relative flex items-center justify-center mb-8">
-        {/* Background pulse animation for running timer */}
-        {isRunning && (
-          <div className="absolute rounded-full w-[270px] h-[270px] animate-pulse-ring opacity-20 bg-primary" />
-        )}
-        
         {/* Main timer circle */}
         <div className="relative flex items-center justify-center w-[260px] h-[260px] rounded-full bg-background shadow-lg focus-shadow">
           {/* Timer SVG */}
