@@ -1,3 +1,25 @@
+# Focus Sprint Helper (Pomodoro App)
+
+A simple Pomodoro-style focus app built using Lovable.dev. It helps users focus by running 25-minute work sessions followed by 5-minute breaks.
+
+## 🔧 Built With
+- Lovable.dev
+- HTML, CSS, JavaScript (React-based export)
+
+## 🎯 Features
+- Timer for work and breaks (Pomodoro technique)
+- Basic UI for task input and session control
+
+## 📦 What I Need Help With
+- Turn this into a functional Android app
+- Add local notifications/reminders
+- Polish the UI (optional)
+- Build a production-ready `.aab` file for Google Play Store
+
+## 📁 Repo Link
+This code is shared with a Fiverr developer to assist with app conversion and deployment.
+
+---
 # Welcome to your Lovable project
 
 ## Project info
@@ -61,6 +83,30 @@ This project is built with .
 - Tailwind CSS
 
 ## How can I deploy this project?
+
+# Focus Sprint Helper (Pomodoro App)
+
+A simple Pomodoro-style focus app built using Lovable.dev. It helps users focus by running 25-minute work sessions followed by 5-minute breaks.
+
+## 🔧 Built With
+- Lovable.dev
+- HTML, CSS, JavaScript (React-based export)
+
+## 🎯 Features
+- Timer for work and breaks (Pomodoro technique)
+- Basic UI for task input and session control
+
+## 📦 What I Need Help With
+- Turn this into a functional Android app
+- Add local notifications/reminders
+- Polish the UI (optional)
+- Build a production-ready `.aab` file for Google Play Store
+
+## 📁 Repo Link
+This code is shared with a Fiverr developer to assist with app conversion and deployment.
+
+---
+
 
 Simply open [Lovable](https://lovable.dev/projects/ccb0b97a-1c35-41bb-be10-564d88920161) and click on Share -> Publish.
 
